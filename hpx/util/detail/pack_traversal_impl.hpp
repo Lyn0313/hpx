@@ -45,28 +45,12 @@ namespace util {
                     return std::move(boxed_);
                 }
             };
-            template <>
-            class spread_box<>
-            {
-            public:
-                explicit HPX_CONSTEXPR spread_box() noexcept
-                {
-                }
-                explicit HPX_CONSTEXPR spread_box(tuple<>) noexcept
-                {
-                }
-
-                HPX_CONSTEXPR tuple<> unbox() const noexcept
-                {
-                    return tuple<>{};
-                }
-            };
 
             /// Returns an empty spread box which represents an empty
             /// mapped object.
             HPX_CONSTEXPR inline spread_box<> empty_spread() noexcept
             {
-                return spread_box<>{};
+                return spread_box<>(util::make_tuple());
             }
 
             /// Deduces to a true_type if the given type is a spread marker
@@ -195,48 +179,52 @@ namespace util {
                 }
 
                 HPX_CONSTEXPR auto operator()() const noexcept
-                    -> decltype(empty_spread())
+                    -> decltype(spreading::empty_spread())
                 {
-                    return empty_spread();
+                    return spreading::empty_spread();
                 }
             };
+
+            template <bool IsAnySpread, typename C, typename... T>
+            struct apply_spread_impl;
 
             /// Use the recursive instantiation for a variadic pack which
             /// may contain spread types
             template <typename C, typename... T>
-            HPX_CONSTEXPR auto apply_spread_impl(std::true_type, C&& callable,
-                T&&... args) -> decltype(invoke_fused(std::forward<C>(callable),
-                util::tuple_cat(undecorate(std::forward<T>(args))...)))
+            struct apply_spread_impl</*IsAnySpread=*/true, C, T...>
             {
-                return invoke_fused(std::forward<C>(callable),
-                    util::tuple_cat(undecorate(std::forward<T>(args))...));
-            }
+                using args_t = decltype(util::tuple_cat(undecorate(std::declval<T>())...));
+                using type = typename invoke_fused_result<C, args_t>::type;
+
+                static HPX_CONSTEXPR type call(C&& callable, T&&... args)
+                {
+                    return hpx::util::invoke_fused(std::forward<C>(callable),
+                        util::tuple_cat(undecorate(std::forward<T>(args))...));
+                }
+            };
 
             /// Use the linear instantiation for variadic packs which don't
             /// contain spread types.
             template <typename C, typename... T>
-            HPX_CONSTEXPR auto apply_spread_impl(std::false_type, C&& callable,
-                T&&... args) -> typename invoke_result<C, T...>::type
+            struct apply_spread_impl</*IsAnySpread=*/false, C, T...>
             {
-                return hpx::util::invoke(
-                    std::forward<C>(callable), std::forward<T>(args)...);
-            }
+                using type = typename invoke_result<C, T...>::type;
+
+                static HPX_CONSTEXPR type call(C&& callable, T&&... args)
+                {
+                    return hpx::util::invoke(
+                        std::forward<C>(callable), std::forward<T>(args)...);
+                }
+            };
 
             /// Deduces to a true_type if any of the given types marks
             /// the underlying type to be spread into the current context.
-            template <typename... T>
-            using is_any_spread_t = any_of<is_spread<T>...>;
-
-            template <typename C, typename... T>
+            template <typename C, typename... T, typename Impl =
+                apply_spread_impl<any_of<is_spread<T>...>::value, C, T...>>
             HPX_CONSTEXPR auto map_spread(C&& callable, T&&... args)
-                -> decltype(apply_spread_impl(is_any_spread_t<T...>{},
-                    std::forward<C>(callable), std::forward<T>(args)...))
+                -> typename Impl::type
             {
-                // Check whether any of the args is a detail::flatted_tuple_t,
-                // if not, use the linear called version for better
-                // compilation speed.
-                return apply_spread_impl(is_any_spread_t<T...>{},
-                    std::forward<C>(callable), std::forward<T>(args)...);
+                return Impl::call(std::forward<C>(callable), std::forward<T>(args)...);
             }
 
             /// Converts the given variadic arguments into a tuple in a way

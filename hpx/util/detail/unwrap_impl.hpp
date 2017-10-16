@@ -54,10 +54,10 @@ namespace util {
             template <typename T,
                 typename std::enable_if<is_void_future<
                     typename std::decay<T>::type>::value>::type* = nullptr>
-            auto operator()(T&& future) const -> decltype(spread_this())
+            auto operator()(T&& future) const -> decltype(spreading::empty_spread())
             {
                 std::forward<T>(future).get();
-                return spread_this();
+                return spreading::empty_spread();
             }
 
             template <typename T,
@@ -80,10 +80,10 @@ namespace util {
             template <typename T,
                 typename std::enable_if<is_void_future<
                     typename std::decay<T>::type>::value>::type* = nullptr>
-            auto operator()(T&& future) const -> decltype(spread_this())
+            auto operator()(T&& future) const -> decltype(spreading::empty_spread())
             {
                 std::forward<T>(future).get();
-                return spread_this();
+                return spreading::empty_spread();
             }
 
             template <typename T,
@@ -104,10 +104,10 @@ namespace util {
             template <typename T,
                 typename std::enable_if<is_void_future<
                     typename std::decay<T>::type>::value>::type* = nullptr>
-            auto operator()(T&& future) const -> decltype(spread_this())
+            auto operator()(T&& future) const -> decltype(spreading::empty_spread())
             {
                 std::forward<T>(future).get();
-                return spread_this();
+                return spreading::empty_spread();
             }
 
             template <typename T,
@@ -226,10 +226,9 @@ namespace util {
                     args)...))>::apply(std::forward<C>(callable),
                 std::forward<Args>(args)...))
         {
-            return invoke_wrapped_decorate_select<Depth,
-                decltype(unwrap_depth_impl<Depth>(std::forward<Args>(
-                    args)...))>::apply(std::forward<C>(callable),
-                std::forward<Args>(args)...);
+            using Result = decltype(unwrap_depth_impl<Depth>(std::forward<Args>(args)...));
+            return invoke_wrapped_decorate_select<Depth, Result>::apply(
+                std::forward<C>(callable), std::forward<Args>(args)...);
         }
 
         /// Implements the callable object which is returned by n invocation
