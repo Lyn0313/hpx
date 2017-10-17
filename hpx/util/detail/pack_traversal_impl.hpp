@@ -28,38 +28,26 @@ namespace util {
     namespace detail {
         /// Exposes useful facilities for dealing with 1:n mappings
         namespace spreading {
-            /// A struct to mark a tuple to be unpacked into the parent context
-            template <typename... T>
             class spread_box
             {
-                tuple<T...> boxed_;
-
             public:
-                explicit HPX_CONSTEXPR spread_box(tuple<T...> boxed)
-                  : boxed_(std::move(boxed))
+                explicit HPX_CONSTEXPR spread_box() noexcept
                 {
                 }
 
-                tuple<T...> unbox()
+                HPX_CONSTEXPR tuple<> unbox() const noexcept
                 {
-                    return std::move(boxed_);
+                    return tuple<>{};
                 }
             };
-
-            /// Returns an empty spread box which represents an empty
-            /// mapped object.
-            HPX_CONSTEXPR inline spread_box<> empty_spread() noexcept
-            {
-                return spread_box<>(util::make_tuple());
-            }
 
             /// Deduces to a true_type if the given type is a spread marker
             template <typename T>
             struct is_spread : std::false_type
             {
             };
-            template <typename... T>
-            struct is_spread<spread_box<T...>> : std::true_type
+            template <>
+            struct is_spread<spread_box> : std::true_type
             {
             };
 
@@ -70,7 +58,7 @@ namespace util {
             {
             };
             template <>
-            struct is_empty_spread<spread_box<>> : std::true_type
+            struct is_empty_spread<spread_box> : std::true_type
             {
             };
 
@@ -81,8 +69,7 @@ namespace util {
             {
                 return std::forward<T>(type);
             }
-            template <typename... T>
-            HPX_CONSTEXPR auto unpack(spread_box<T...> type)
+            HPX_CONSTEXPR auto unpack(spread_box type)
                 -> decltype(type.unbox())
             {
                 return type.unbox();
@@ -102,7 +89,7 @@ namespace util {
             {
                 return unpack(std::forward<T>(type));
             }
-            inline void unpack_or_void(spread_box<>) noexcept
+            inline void unpack_or_void(spread_box) noexcept
             {
             }
 
@@ -113,8 +100,7 @@ namespace util {
             {
                 return tuple<T>{std::forward<T>(type)};
             }
-            template <typename... T>
-            HPX_CONSTEXPR auto undecorate(spread_box<T...> type)
+            HPX_CONSTEXPR auto undecorate(spread_box  type)
                 -> decltype(type.unbox())
             {
                 return type.unbox();
@@ -153,7 +139,7 @@ namespace util {
             /// spread box is returned instead. This is useful to propagate
             /// empty mappings back to the caller.
             template <template <typename...> class Type = tuple>
-            using flat_tupelizer_of_t = tupelizer_base<spread_box<>, Type>;
+            using flat_tupelizer_of_t = tupelizer_base<spread_box, Type>;
 
             /// A callable object which maps its content back to an
             /// array like type.
@@ -179,9 +165,9 @@ namespace util {
                 }
 
                 HPX_CONSTEXPR auto operator()() const noexcept
-                    -> decltype(spreading::empty_spread())
+                    -> decltype(spreading::spread_box())
                 {
-                    return spreading::empty_spread();
+                    return spreading::spread_box();
                 }
             };
 
@@ -557,7 +543,7 @@ namespace util {
             /// Remap the container to zero arguments
             template <typename M, typename T>
             auto remap_container(container_mapping_tag<true, false>, M&& mapper,
-                T&& container) -> decltype(spreading::empty_spread())
+                T&& container) -> decltype(spreading::spread_box())
             {
                 for (auto&& val :
                     container_accessor_of(std::forward<T>(container)))
@@ -567,7 +553,7 @@ namespace util {
                     std::forward<M>(mapper)(std::forward<decltype(val)>(val));
                 }
                 // Return one instance of an empty mapping for the container
-                return spreading::empty_spread();
+                return spreading::spread_box();
             }
 
             /// Remaps the content of the given container with type T,

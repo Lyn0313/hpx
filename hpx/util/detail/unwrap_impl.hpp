@@ -54,10 +54,10 @@ namespace util {
             template <typename T,
                 typename std::enable_if<is_void_future<
                     typename std::decay<T>::type>::value>::type* = nullptr>
-            auto operator()(T&& future) const -> decltype(spreading::empty_spread())
+            auto operator()(T&& future) const -> decltype(spreading::spread_box())
             {
                 std::forward<T>(future).get();
-                return spreading::empty_spread();
+                return spreading::spread_box();
             }
 
             template <typename T,
@@ -80,10 +80,10 @@ namespace util {
             template <typename T,
                 typename std::enable_if<is_void_future<
                     typename std::decay<T>::type>::value>::type* = nullptr>
-            auto operator()(T&& future) const -> decltype(spreading::empty_spread())
+            auto operator()(T&& future) const -> decltype(spreading::spread_box())
             {
                 std::forward<T>(future).get();
-                return spreading::empty_spread();
+                return spreading::spread_box();
             }
 
             template <typename T,
@@ -104,10 +104,10 @@ namespace util {
             template <typename T,
                 typename std::enable_if<is_void_future<
                     typename std::decay<T>::type>::value>::type* = nullptr>
-            auto operator()(T&& future) const -> decltype(spreading::empty_spread())
+            auto operator()(T&& future) const -> decltype(spreading::spread_box())
             {
                 std::forward<T>(future).get();
-                return spreading::empty_spread();
+                return spreading::spread_box();
             }
 
             template <typename T,
